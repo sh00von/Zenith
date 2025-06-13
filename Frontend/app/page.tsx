@@ -129,7 +129,7 @@ export default function Home() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('https://gee-brain-ai-agent-backend.vercel.app/rag-query', {
+      const response = await fetch('http://localhost:5000/rag-query', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -382,7 +382,6 @@ export default function Home() {
                                 return !className?.includes('inline') && match ? (
                                   <div className="relative">
                                     <SyntaxHighlighter
-                                      style={oneDark as any}
                                       language={match[1]}
                                       PreTag="div"
                                       customStyle={{
@@ -390,7 +389,7 @@ export default function Home() {
                                         padding: '1rem',
                                         background: '#18181b'
                                       }}
-                                      className="rounded-lg !bg-zinc-900 !border !border-zinc-800"
+                                      className="rounded-lg  "
                                     >
                                       {String(children).replace(/\n$/, '')}
                                     </SyntaxHighlighter>

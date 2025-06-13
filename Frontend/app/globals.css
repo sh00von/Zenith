@@ -50,3 +50,45 @@ input:focus-visible {
   outline: 2px solid #52525b;
   outline-offset: 2px;
 }
+
+h3{
+  color: #ccc !important;
+  font-weight: 700 !important;
+  font-size: 1.5rem !important;
+  text-decoration: underline !important;
+}
+
+p {
+  text-align: justify !important;
+}
+
+li::marker {
+  color: #ccc !important;
+}
+
+li {
+  padding-left: 1.5rem !important;
+}
+
+pre {
+  border-radius: 0.5rem !important;
+  overflow-x: auto !important;
+  margin: 1rem 0 !important;
+}
+
+code {
+  font-family: 'Consolas', 'Monaco', monospace !important;
+  font-size: 0.9rem !important;
+  color: #e4e4e7 !important;
+  padding: 0.2rem 0.4rem !important;
+  border-radius: 0.25rem !important;
+}
+
+a {
+  color: #3b82f6 !important;
+  text-decoration: underline !important;
+}
+
+a:hover {
+  color: #2563eb !important;
+}
