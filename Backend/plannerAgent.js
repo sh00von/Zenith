@@ -16,7 +16,7 @@ import { MemoryAgent }         from './agents/MemoryAgent.js';
 
 const EMB_PATH   = './dataset_embeddings.json';
 const EMB_MODEL  = 'text-embedding-004';
-const GEN_MODEL  = 'gemini-2.0-flash';
+const GEN_MODEL  = 'gemini-2.0-flash-lite';
 
 // set WRITE_MEMORY=1 to enable writes, anything else disables
 const WRITE_MEMORY = process.env.WRITE_MEMORY === '0';
