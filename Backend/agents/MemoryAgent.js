@@ -7,14 +7,14 @@ export class MemoryAgent {
     this.embeddings = embeddings;
   }
 
-  update(query, queryEmbedding) {
-    console.log("MemoryAgent ▶️ updating embeddings…");
+  update(query, embedding) {
+    console.log("Memory ▶️ saving new memory…");
     this.embeddings.push({
-      ee_code:  `user-${Date.now()}`,
+      ee_code: `user-${Date.now()}`,
       text:     query,
-      embedding: queryEmbedding
+      embedding
     });
-    fs.writeFileSync(this.path, JSON.stringify(this.embeddings, null, 2));
-    console.log("MemoryAgent ▶️ embeddings file written.");
+    fs.writeFileSync(this.path, JSON.stringify(this.embeddings, null,2));
+    console.log("Memory ▶️ saved.");
   }
 }
