@@ -1,10 +1,20 @@
 // server.js
 import 'dotenv/config';
 import express from 'express';
+import cors from 'cors';
 import { tracer } from './utils/tracer.js';
 import { plannerAgent } from './plannerAgent.js';
 
 const app = express();
+
+// --- MIDDLEWARE ---
+// Enable CORS for all routes; adjust `origin` as needed for production
+app.use(cors({
+  origin: '*',
+  methods: ['GET','POST','OPTIONS'],
+  allowedHeaders: ['Content-Type','Authorization']
+}));
+
 app.use(express.json());
 
 (async () => {
@@ -46,5 +56,6 @@ app.use(express.json());
     console.log(`Server ▶️ listening on http://localhost:${PORT}`);
   });
 })();
+
 // Export the app for Vercel
 export default app;

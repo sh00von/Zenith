@@ -19,7 +19,7 @@ const EMB_MODEL  = 'text-embedding-004';
 const GEN_MODEL  = 'gemini-2.0-flash-lite';
 
 // set WRITE_MEMORY=1 to enable writes, anything else disables
-const WRITE_MEMORY = process.env.WRITE_MEMORY === '0';
+const WRITE_MEMORY = process.env.WRITE_MEMORY === '1';
 
 export class PlannerAgent {
   constructor() {
@@ -47,7 +47,7 @@ export class PlannerAgent {
     this.answer   = new AnswerAgent(this.genModel);
     this.critic   = new CriticAgent(this.genModel);
     this.meta     = new MetacognitionAgent(this.genModel);
-    this.memory   = new MemoryAgent(EMB_PATH, this.embeddings, WRITE_MEMORY);
+    this.memory = new MemoryAgent(EMB_PATH, this.embeddings, WRITE_MEMORY);
 
     console.log("Planner ▶️ all agents ready.");
   }
