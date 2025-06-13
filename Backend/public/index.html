@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GEE AI Agent</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        textarea {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #3e8e41;
+        }
+        #response {
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 4px;
+            white-space: pre-wrap; /* Preserve line breaks in the text */
+        }
+    </style>
+</head>
+<body>
+    <h1>Google Earth Engine AI Agent</h1>
+    <label for="query">Enter your query:</label>
+    <textarea id="query" rows="4" placeholder="e.g., create me a flood map of sylhet 2020"></textarea>
+    <button onclick="askQuestion()">Ask the Agent</button>
+
+    <h2>Response:</h2>
+    <div id="response"></div>
+
+    <script>
+        async function askQuestion() {
+            const query = document.getElementById('query').value;
+            const responseDiv = document.getElementById('response');
+
+            if (!query) {
+                responseDiv.textContent = "Please enter a query.";
+                return;
+            }
+
+            responseDiv.textContent = "Loading..."; // Indicate loading
+
+            try {
+                const response = await fetch('/plan-and-code', { // Use /plan-and-code endpoint
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ query: query })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`HTTP error! status: ${response.status} - ${errorData.error || 'Unknown error'}`);
+                }
+
+                const data = await response.json();
+                responseDiv.innerHTML = `
+                    <h3>Plan:</h3>
+                    <pre>${data.plan ? data.plan.join('\\n') : 'No plan generated.'}</pre>
+                    <h3>Assumptions:</h3>
+                    <pre>${data.assumptions ? data.assumptions.join('\\n') : 'No assumptions made.'}</pre>
+                    <h3>Query Analysis:</h3>
+                    <pre>${data.queryAnalysis ? data.queryAnalysis.analysis : 'No query analysis'}</pre>
+                    <h3>Selected Datasets:</h3>
+                    <pre>${data.datasets ? JSON.stringify(data.datasets, null, 2) : 'No datasets selected.'}</pre>
+                    <h3>Generated Code:</h3>
+                    <pre>${data.generatedCode || 'No code generated.'}</pre>
+                `;
+
+            } catch (error) {
+                console.error('Error:', error);
+                responseDiv.textContent = `Error: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>
