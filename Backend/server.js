@@ -1,54 +1,37 @@
-const express = require('express');
-const ragService = require('./ragService');
-const masterAgent = require('./masterAgent'); // Now we use the master agent
-const fs = require('fs');
+// server.js
+import 'dotenv/config';
+import express from 'express';
+import { plannerAgent } from './plannerAgent.js';
 
-const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = 3000;
+const app  = express();
 
-app.use(express.static('public')); // Serve static files from the 'public' directory
 app.use(express.json());
 
-// ... (Keep the /ask endpoint, for now, if you want to retain simple Q&A) ...
-app.post('/ask', async (req, res) => {
-    try {
-        // (Same as before, if you want to retain simple Q&A)
-        const { query } = req.body;
-        if (!query) return res.status(400).json({ error: 'Please provide a "query".' });
-        const answer = await ragService.ask(query);
-        res.status(200).json({ answer: answer.trim() });
-    } catch (error) {
-        console.error("Error in /ask endpoint:", error);
-        res.status(500).json({ error: 'An internal server error occurred.' });
-    }
-});
+(async () => {
+  try {
+    await plannerAgent.initialize();
+    console.log("Server ▶️ PlannerAgent initialized.");
 
-// Endpoint for the advanced planner and code generator
-app.post('/plan-and-code', async (req, res) => {
-    try {
-        const { query } = req.body;
-        if (!query) return res.status(400).json({ error: 'Please provide a "query".' });
+    app.post('/rag-query', async (req, res) => {
+      const { query } = req.body;
+      if (!query) {
+        return res.status(400).json({ error: 'Query is required.' });
+      }
+      try {
+        const result = await plannerAgent.processQuery(query);
+        res.json(result);
+      } catch (e) {
+        console.error("Server ❌ Error:", e);
+        res.status(500).json({ error: e.message });
+      }
+    });
 
-        const result = await masterAgent.processQuery(query); // Call the master agent
-
-        res.status(200).json(result);
-    } catch (error) {
-        console.error("Error in /plan-and-code endpoint:", error);
-        res.status(500).json({ error: 'An internal server error occurred.' });
-    }
-});
-
-async function startServer() {
-    try {
-        await ragService.initialize();
-        app.listen(PORT, () => {
-            console.log(`Server is running on http://localhost:${PORT}`);
-            console.log("Agent is ready. Use POST /ask or POST /plan-and-code.");
-        });
-    } catch (error) {
-        console.error("Failed to start the server:", error);
-        process.exit(1);
-    }
-}
-
-startServer();
+    app.listen(PORT, () => {
+      console.log(`Server ▶️ Listening on http://localhost:${PORT}`);
+    });
+  } catch (e) {
+    console.error("Server ❌ Initialization failed:", e);
+    process.exit(1);
+  }
+})();
