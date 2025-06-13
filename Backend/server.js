@@ -46,3 +46,5 @@ app.use(express.json());
     console.log(`Server ▶️ listening on http://localhost:${PORT}`);
   });
 })();
+// Export the app for Vercel
+export default app;

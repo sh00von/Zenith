@@ -1,6 +1,5 @@
 {
     "version": 2,
-    "name": "gee-sophisticated-brain",
     "builds": [
       {
         "src": "server.js",
@@ -16,17 +15,9 @@
     ],
     "routes": [
       {
-        "src": "/rag-query",
-        "methods": ["POST"],
+        "src": "/(.*)",
         "dest": "server.js"
       }
-    ],
-    "env": {
-      "GEMINI_API_KEY": "AIzaSyB2SBQJdcsbkK4iaWrYv1auSt9mgwhJrvs" 
-    },
-    "node": {
-      "runtime": "nodejs18.x",
-      "maxLambdaSize": "50mb"
-    }
+    ]
   }
   

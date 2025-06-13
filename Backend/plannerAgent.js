@@ -16,7 +16,10 @@ import { MemoryAgent }         from './agents/MemoryAgent.js';
 
 const EMB_PATH   = './dataset_embeddings.json';
 const EMB_MODEL  = 'text-embedding-004';
-const GEN_MODEL  = 'gemini-1.5-flash';
+const GEN_MODEL  = 'gemini-2.0-flash';
+
+// set WRITE_MEMORY=1 to enable writes, anything else disables
+const WRITE_MEMORY = process.env.WRITE_MEMORY === '0';
 
 export class PlannerAgent {
   constructor() {
@@ -35,16 +38,16 @@ export class PlannerAgent {
     this.genModel   = ai.getGenerativeModel({ model: GEN_MODEL });
 
     // instantiate agents
-    this.pre        = new PreprocessAgent();
-    this.attn       = new AttentionAgent();
-    this.intent     = new IntentAgent(this.genModel);
-    this.search     = new SearchAgent(this.embedModel, this.embeddings);
-    this.distill    = new DistillAgent(this.genModel);
-    this.planner    = new PlanningAgent(this.genModel);
-    this.answer     = new AnswerAgent(this.genModel);
-    this.critic     = new CriticAgent(this.genModel);
-    this.meta       = new MetacognitionAgent(this.genModel);
-    this.memory     = new MemoryAgent(EMB_PATH, this.embeddings);
+    this.pre      = new PreprocessAgent();
+    this.attn     = new AttentionAgent();
+    this.intent   = new IntentAgent(this.genModel);
+    this.search   = new SearchAgent(this.embedModel, this.embeddings);
+    this.distill  = new DistillAgent(this.genModel);
+    this.planner  = new PlanningAgent(this.genModel);
+    this.answer   = new AnswerAgent(this.genModel);
+    this.critic   = new CriticAgent(this.genModel);
+    this.meta     = new MetacognitionAgent(this.genModel);
+    this.memory   = new MemoryAgent(EMB_PATH, this.embeddings, WRITE_MEMORY);
 
     console.log("Planner ▶️ all agents ready.");
   }
@@ -52,21 +55,21 @@ export class PlannerAgent {
   async processQuery(raw) {
     console.log(`\nPlanner ▶️ Received query: "${raw}"`);
 
-    // Step 1) Perception
+    // 1) Perception
     const normalized = this.pre.preprocess(raw);
 
-    // Step 2) Attention
+    // 2) Attention
     const tokens = this.attn.filterTokens(normalized);
 
-    // Step 3) Intent
+    // 3) Intent
     const { intent, entities } = await this.intent.extract(normalized);
 
-    // Step 4) Retrieval
+    // 4) Retrieval
     const { candidates, queryEmbedding } = await this.search.search(normalized, entities);
 
-    // — DEFENSIVE FILTER: remove any undefined or malformed entries —
+    // Defensive filter: remove any invalid entries
     const validCandidates = Array.isArray(candidates)
-      ? candidates.filter(c => c != null && typeof c.text === 'string')
+      ? candidates.filter(c => c && typeof c.text === 'string')
       : [];
 
     if (validCandidates.length === 0) {
@@ -74,16 +77,16 @@ export class PlannerAgent {
     }
     console.log(`Planner ▶️ ${validCandidates.length} valid candidates`);
 
-    // Step 5) Working Memory (Distillation)
+    // 5) Working Memory (Distillation)
     const distilledFacts = await this.distill.distill(normalized, validCandidates);
 
-    // Step 6) Executive Planning
+    // 6) Executive Planning
     const plan = await this.planner.plan(distilledFacts, normalized);
 
-    // Step 7) Verbalization
+    // 7) Verbalization
     let answer = await this.answer.answer(normalized, distilledFacts, plan);
 
-    // Step 8) Critic Loop
+    // 8) Critic Loop
     const critique = await this.critic.critique(normalized, answer, distilledFacts);
     if (critique.confidence < 0.7 && critique.improve) {
       console.log('Planner ▶️ Critic suggests improvement:', critique.improve);
@@ -94,16 +97,16 @@ export class PlannerAgent {
       );
     }
 
-    // Step 9) Metacognition
+    // 9) Metacognition
     const selfEval = await this.meta.evaluate(answer, normalized);
 
-    // Step 10) Memory Consolidation
+    // 10) Memory Consolidation (may be disabled)
     this.memory.update(normalized, queryEmbedding);
 
     // Final structured JSON
     return {
       normalizedQuery: normalized,
-      filteredTokens: tokens,
+      filteredTokens:  tokens,
       intent,
       entities,
       candidates: validCandidates.map(c => ({ ee_code: c.ee_code, score: c.score })),
