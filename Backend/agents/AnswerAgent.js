@@ -147,6 +147,73 @@ Map.addLayer(significantChange, {
 export class AnswerAgent {
   constructor(model) {
     this.model = model;  // raw Gemini model
+    this.popularDatasets = [
+      // Satellite Imagery
+      'LANDSAT/LC08/C02/T1_L2',    // Landsat 8
+      'LANDSAT/LE07/C02/T1_L2',    // Landsat 7
+      'LANDSAT/LT05/C02/T1_L2',    // Landsat 5
+      'COPERNICUS/S2_SR',          // Sentinel-2
+      'COPERNICUS/S1_GRD',         // Sentinel-1
+      'MODIS/006/MOD13Q1',         // MODIS NDVI
+      'MODIS/006/MOD11A1',         // MODIS LST
+      'MODIS/006/MCD12Q1',         // MODIS Land Cover
+      
+      // Administrative Boundaries
+      'FAO/GAUL/2015/level0',      // FAO GAUL Country Level
+      'FAO/GAUL/2015/level1',      // FAO GAUL First Level
+      'FAO/GAUL/2015/level2',      // FAO GAUL Second Level
+      
+      // Elevation & Terrain
+      'USGS/SRTMGL1_003',          // SRTM DEM
+      'USGS/NED',                  // National Elevation Dataset
+      'COPERNICUS/DEM/GLO30',      // Copernicus 30m DEM
+      'WWF/HydroSHEDS/03CONDEM',   // HydroSHEDS
+      
+      // Land Cover & Land Use
+      'USGS/NLCD',                 // National Land Cover
+      'ESA/WorldCover/v100',       // ESA WorldCover
+      'COPERNICUS/Landcover/100m/Proba-V-C3/Global', // Copernicus Land Cover
+      'USGS/GAP/CONUS/2011',       // GAP Analysis
+      
+      // Agriculture & Food Security
+      'USGS/GFSAD1000_V1',         // Global Food Security 1km
+      'USGS/GFSAD30LANDSAT_V1',    // Global Food Security 30m
+      'USDA/NASS/CDL',             // Cropland Data Layer
+      
+      // Climate & Weather
+      'ECMWF/ERA5/DAILY',          // ERA5 Climate Reanalysis
+      'NOAA/GFS0P25',              // Global Forecast System
+      'NASA/GLDAS/V021/NOAH/G025/T3H', // GLDAS
+      
+      // Water & Hydrology
+      'WWF/HydroSHEDS/15CONDEM',   // HydroSHEDS 15s
+      'JRC/GSW1_0/GlobalSurfaceWater', // Global Surface Water
+      'USGS/WBD/2017/HUC12',       // Watershed Boundaries
+      
+      // Population & Human Impact
+      'CIESIN/GPWv411/GPW_Population_Density', // Population Density
+      'CIESIN/GPWv411/GPW_Population_Count',   // Population Count
+      'DLR/WSF/WSF2015/v1',        // World Settlement Footprint
+      
+      // Protected Areas
+      'WCMC/WDPA/current/polygons', // World Database on Protected Areas
+      'USGS/GAP/PAD-US/v20',       // Protected Areas Database
+      
+      // Forest & Vegetation
+      'UMD/hansen/global_forest_change_2021_v1_9', // Global Forest Change
+      'MODIS/006/MOD44B',          // Vegetation Continuous Fields
+      'NASA/ORNL/DAYMET_V4',       // Daymet Daily Surface Weather
+      
+      // Urban & Infrastructure
+      'GOOGLE/DYNAMICWORLD/V1',    // Dynamic World
+      'GOOGLE/Research/open-buildings/v3/polygons', // Open Buildings
+      'GOOGLE/Research/open-roads/v1', // Open Roads
+      
+      // Soil & Geology
+      'ISRIC/soilgrids/250m',      // SoilGrids
+      'CSP/ERGo/1_0/Global/ALOS_landforms', // Global Landforms
+      'CSP/ERGo/1_0/Global/SRTM_landforms'  // SRTM Landforms
+    ];
   }
 
   /**
@@ -156,23 +223,57 @@ export class AnswerAgent {
    * @param {string} distilledFacts   Bullet-list of facts (or empty string)
    * @param {string[]} plan           Array of plan steps (or empty)
    * @param {string[]} codeExamples   Array of relevant code examples
+   * @param {object[]} candidates     Array of candidate dataset references
    */
-  async answer(query, distilledFacts = '', plan = [], codeExamples = []) {
+  async answer(query, distilledFacts = '', plan = [], codeExamples = [], candidates = []) {
     return tracer.startActiveSpan('AnswerAgent.answer', async span => {
       try {
         // Optional FACTS section
-        const factsSection = distilledFacts
-          ? `### FACTS\n${distilledFacts.split('\n').map(f => '- ' + f).join('\n')}\n`
+        const factsSection = distilledFacts && distilledFacts.length
+          ? `### FACTS\n${Array.isArray(distilledFacts) ? distilledFacts.map(f => `- ${f}`).join('\n') : distilledFacts}\n`
           : '';
 
         // Optional PLAN section
-        const planSection = plan.length
-          ? `### PLAN\n${plan.map((s, i) => `${i+1}. ${s}`).join('  \n')}\n`
+        const planSection = plan && plan.length
+          ? `### PLAN\n${Array.isArray(plan) ? plan.map((s, i) => `${i+1}. ${s}`).join('\n') : plan}\n`
           : '';
 
         // Optional CODE EXAMPLES section
-        const codeExamplesSection = codeExamples.length
-          ? `### RELEVANT CODE EXAMPLES\n${codeExamples.map((code, i) => `Example ${i + 1}:\n\`\`\`js\n${code}\n\`\`\``).join('\n\n')}\n`
+        const codeExamplesSection = codeExamples && codeExamples.length
+          ? `### RELEVANT CODE EXAMPLES\n${Array.isArray(codeExamples) ? codeExamples.map((code, i) => `Example ${i + 1}:\n\`\`\`js\n${code}\n\`\`\``).join('\n\n') : codeExamples}\n`
+          : '';
+
+        // Optional REFERENCES section
+        const referencesSection = candidates.length
+          ? `### REFERENCES\n${candidates
+              .sort((a, b) => {
+                // Get indices in priority list
+                const aIndex = this.popularDatasets.indexOf(a.ee_code);
+                const bIndex = this.popularDatasets.indexOf(b.ee_code);
+
+                // If both are in priority list, sort by priority
+                if (aIndex !== -1 && bIndex !== -1) {
+                  return aIndex - bIndex;
+                }
+                // If only a is in priority list, a comes first
+                if (aIndex !== -1) {
+                  return -1;
+                }
+                // If only b is in priority list, b comes first
+                if (bIndex !== -1) {
+                  return 1;
+                }
+                // If neither is in priority list, sort by score
+                return b.score - a.score;
+              })
+              .map(c => {
+                const isPopular = this.popularDatasets.includes(c.ee_code);
+                const bandInfo = c.bands ? `\n  - Bands: ${c.bands.map(band => 
+                  `${band.name}${band.description ? ` (${band.description})` : ''}${band.pixel_size ? ` [${band.pixel_size}]` : ''}`
+                ).join(', ')}` : '';
+                return `- [${c.ee_code}](${c.url})${c.provider ? ` (Provider: ${c.provider})` : ''}${c.pixel_size ? ` - ${c.pixel_size} resolution` : ''}${isPopular ? ' 🔥' : ''}${bandInfo}`;
+              })
+              .join('\n')}\n`
           : '';
 
 // Assemble prompt
@@ -190,6 +291,7 @@ Respond with these sections (include only those that are applicable to the quest
 - ### PLAN (optional, step-by-step approach)  
 - ### CODE (optional, wrapped in \`\`\`js\`\`\`)  
 - ### EXAMPLE (optional, concrete demonstration)  
+- ### REFERENCES (optional, links to relevant datasets)
 
 **Important Guidelines:**
 - NEVER say "I cannot answer this" or "I don't know". Always provide the best possible answer based on your knowledge.
@@ -200,6 +302,9 @@ Respond with these sections (include only those that are applicable to the quest
 - For technical questions, provide practical code examples and explain key concepts.
 - For conceptual questions, include relevant background information and real-world examples.
 - If a question is unclear, make reasonable assumptions and state them explicitly.
+- Always include relevant dataset references when available.
+- Prioritize commonly used and well-documented datasets like Landsat, Sentinel, and MODIS.
+- Include dataset resolution information when available.
 
 **Code Generation Guidelines:**
 - Use the provided code examples as reference when available
@@ -225,7 +330,7 @@ ${FEW_SHOT}
 ${query}
 </user>
 
-${factsSection}${planSection}${codeExamplesSection}
+${factsSection}${planSection}${codeExamplesSection}${referencesSection}
 <assistant>
 `;
 

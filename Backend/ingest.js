@@ -10,7 +10,7 @@ const EMBEDDING_MODEL = 'text-embedding-004';
 // --- CONFIGURATION FOR BATCHING ---
 // The number of requests to run in parallel in a single batch.
 // Keep this under your API's requests-per-minute limit (e.g., 60 RPM).
-const BATCH_SIZE = 40;
+const BATCH_SIZE = 100;
 // The time to wait between batches in milliseconds (e.g., 61 seconds for a 60 RPM limit).
 const TIME_BETWEEN_BATCHES_MS = 100;
 
@@ -24,7 +24,7 @@ function createDocumentText(dataset) {
         .map(c => c.description)
         .slice(0, 5)
         .join(', ');
-    return `Dataset EE Code: ${dataset.ee_code}; Provider: ${dataset.provider}; Description: ${dataset.description}; Classes: ${classDescriptions}`;
+    return `Dataset EE Code: ${dataset.ee_code}; Provider: ${dataset.provider}; Description: ${dataset.description}; Classes: ${classDescriptions}; Pixel Size: ${dataset.pixel_size || 'N/A'}; URL: ${dataset.url || 'N/A'}`;
 }
 
 function createCodeExample(dataset) {
@@ -117,19 +117,30 @@ async function main() {
 
         // Create an array of promises for the current batch
         const promises = currentBatch.map(async (dataset) => {
-            const documentText = createDocumentText(dataset);
-            const jsCode = createCodeExample(dataset);
+            const text = `
+Dataset: ${dataset.ee_code}
+Provider: ${dataset.provider || 'Unknown'}
+Resolution: ${dataset.pixel_size || 'Unknown'}
+Description: ${dataset.description || 'No description available'}
+Bands: ${dataset.bands ? dataset.bands.map(band => 
+  `${band.name}${band.description ? ` - ${band.description}` : ''}${band.pixel_size ? ` (${band.pixel_size})` : ''}${band.wavelength ? ` [${band.wavelength}]` : ''}`
+).join(', ') : 'No band information available'}
+Code Example: ${createCodeExample(dataset)}
+`;
             try {
-                const result = await model.embedContent(documentText);
-                const embedding = result.embedding.values;
+                const embedding = await model.embedContent(text);
                 console.log(`  ✅ Success: ${dataset.ee_code}`);
                 return {
                     status: 'fulfilled',
                     value: {
                         ee_code: dataset.ee_code,
-                        text: documentText,
-                        embedding: embedding,
-                        js_code: jsCode
+                        text: text,
+                        embedding: embedding.embedding.values,
+                        js_code: createCodeExample(dataset),
+                        pixel_size: dataset.pixel_size,
+                        url: dataset.url,
+                        provider: dataset.provider,
+                        bands: dataset.bands
                     }
                 };
             } catch (error) {

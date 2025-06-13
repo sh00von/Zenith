@@ -18,54 +18,55 @@ export class CriticAgent {
   async critique(query, answer, facts) {
     console.log("Critic ▶️ evaluating…");
     const prompt = `
-You are a critic. Given the following:
+Given the query: "${query}"
 
-Question:
-"${query}"
+The answer provided: "${answer}"
 
-Facts:
-${facts.split('\n').map(f => '- ' + f).join('\n')}
+And these facts:
+${Array.isArray(facts) ? facts.map(f => `- ${f}`).join('\n') : facts}
 
-Answer:
-"${answer}"
-
-**Please respond with ONE valid JSON object** with exactly two keys:
-- "confidence": a number between 0.8 and 1.0 indicating how good the answer is.
-- "improve": a short suggestion for how to improve, or an empty string if none.
-if in answwer says sorry no information provided in context like this then , process on your own . suggest answer then .
-
-Do **NOT** include any other text, comments, or control characters. Example:
-
-{"confidence":0.72,"improve":"Explain how to handle cloud masking."}
+Evaluate the answer's quality and suggest improvements.
+Respond with a JSON object in this format:
+{
+  "confidence": 0.8,  // number between 0 and 1
+  "improve": "suggestion for improvement"  // string
+}
 `;
-    // ask the model
-    const res = await this.model.generateContent(prompt);
-    const raw = await res.response.text();
-
-    // extract the JSON substring
-    const start = raw.indexOf('{');
-    const end   = raw.lastIndexOf('}');
-    if (start === -1 || end === -1) {
-      console.error("Critic ▶️ no JSON found in response:", raw);
-      return { confidence: 1.0, improve: "" };
-    }
-    let jsonText = raw.substring(start, end + 1);
-
-    // remove non-printable control characters
-    jsonText = jsonText.replace(/[\u0000-\u001F]+/g, '');
-
-    // parse safely
     try {
-      const obj = JSON.parse(jsonText);
-      // validate types
-      if (typeof obj.confidence === 'number' && typeof obj.improve === 'string') {
-        return obj;
+      const r = await this.model.generateContent(prompt);
+      const txt = await r.response.text();
+      
+      // Extract JSON object
+      const jsonMatch = txt.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new Error('No JSON object found in response');
       }
-      throw new Error("Parsed JSON missing required keys or types");
-    } catch (err) {
-      console.error("Critic ▶️ JSON.parse error:", err, "text:", jsonText);
-      // fallback
-      return { confidence: 1.0, improve: "" };
+      
+      const json = jsonMatch[0];
+      console.log(`Critic ▶️ Raw response: ${txt}`);
+      console.log(`Critic ▶️ Extracted JSON: ${json}`);
+      
+      // Parse and validate JSON
+      const critique = JSON.parse(json);
+      if (typeof critique !== 'object') {
+        throw new Error('Response is not an object');
+      }
+      
+      // Validate required fields
+      if (typeof critique.confidence !== 'number' || critique.confidence < 0 || critique.confidence > 1) {
+        throw new Error('Invalid confidence value');
+      }
+      if (typeof critique.improve !== 'string') {
+        throw new Error('Invalid improve value');
+      }
+      
+      return critique;
+    } catch (error) {
+      console.error('Critic ❌ Error:', error.message);
+      return {
+        confidence: 0.5,
+        improve: "Unable to evaluate response quality at this time."
+      };
     }
   }
 }

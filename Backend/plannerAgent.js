@@ -2,6 +2,7 @@
 import fs from 'fs';
 import 'dotenv/config';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { tracer } from './utils/tracer.js';
 
 import { PreprocessAgent }     from './agents/PreprocessAgent.js';
 import { AttentionAgent }      from './agents/AttentionAgent.js';
@@ -52,93 +53,87 @@ export class PlannerAgent {
     console.log("Planner ▶️ all agents ready.");
   }
 
-  async processQuery(raw) {
-    console.log(`\nPlanner ▶️ Received query: "${raw}"`);
+  async processQuery(query) {
+    return tracer.startActiveSpan('PlannerAgent.processQuery', async span => {
+      try {
+        // 1) Preprocess
+        const preprocessed = await this.pre.preprocess(query);
+        console.log(`Planner ▶️ Preprocessed: "${preprocessed}"`);
 
-    // 1) Perception
-    const normalized = await this.pre.preprocess(raw);
+        // 2) Get filtered tokens
+        const filteredTokens = this.attn.filterTokens(preprocessed);
+        console.log(`Planner ▶️ Filtered tokens:`, filteredTokens);
 
-    // 2) Attention
-    const tokens = this.attn.filterTokens(normalized);
+        // 3) Search for relevant datasets
+        const searchResults = await this.search.search(preprocessed, this.embeddings);
+        const candidates = searchResults.map(result => ({
+          ee_code: result.ee_code,
+          url: result.url,
+          provider: result.provider,
+          pixel_size: result.pixel_size,
+          bands: result.bands,
+          score: result.score
+        }));
 
-    // 3) Intent
-    const { intent, entities } = await this.intent.extract(normalized);
+        // 4) Extract entities
+        const entities = await this.intent.extract(preprocessed);
+        console.log(`Planner ▶️ Entities:`, entities);
 
-    // 4) Retrieval
-    const { candidates, queryEmbedding } = await this.search.search(normalized, entities);
+        // 5) Generate plan
+        const distilledFacts = await this.distill.distill(preprocessed, candidates);
+        const plan = await this.planner.plan(distilledFacts, preprocessed);
+        console.log(`Planner ▶️ Plan:`, plan);
 
-    // Defensive filter: remove any invalid entries
-    const validCandidates = Array.isArray(candidates)
-      ? candidates.filter(c => c && typeof c.text === 'string')
-      : [];
+        // 6) Generate answer
+        const answer = await this.answer.answer(
+          preprocessed,
+          distilledFacts,
+          plan,
+          candidates.map(c => c.js_code).filter(Boolean),
+          candidates
+        );
 
-    if (validCandidates.length === 0) {
-      console.log("Planner ▶️ No valid candidates found, proceeding with general knowledge");
-      // Return a basic response structure without candidates
-      return {
-        normalizedQuery: normalized,
-        filteredTokens: tokens,
-        intent,
-        entities,
-        candidates: [],
-        distilledFacts: "No specific data found in embeddings. Using general knowledge.",
-        plan: ["Analyze query", "Provide general guidance", "Include relevant examples"],
-        answer: await this.answer.answer(normalized, "", []),
-        critique: { confidence: 0.8, improve: "" },
-        selfEval: { confidence: 0.8, notes: "Using general knowledge" }
-      };
-    }
-    console.log(`Planner ▶️ ${validCandidates.length} valid candidates`);
+        // 7) Generate critique
+        const critique = await this.critic.critique(preprocessed, answer, distilledFacts);
+        console.log(`Planner ▶️ Critique:`, critique);
 
-    // 5) Working Memory (Distillation)
-    const distilledFacts = await this.distill.distill(normalized, validCandidates);
+        // 8) Generate self-evaluation
+        const selfEval = await this.meta.evaluate(answer, preprocessed);
+        console.log(`Planner ▶️ Self-evaluation:`, selfEval);
 
-    // 6) Executive Planning
-    const plan = await this.planner.plan(distilledFacts, normalized);
-
-    // 7) Verbalization
-    let answer = await this.answer.answer(
-      normalized, 
-      distilledFacts, 
-      plan, 
-      validCandidates
-        .filter(c => c.js_code && typeof c.js_code === 'string')
-        .map(c => c.js_code)
-    );
-
-    // 8) Critic Loop
-    const critique = await this.critic.critique(normalized, answer, distilledFacts);
-    if (critique.confidence < 0.7 && critique.improve) {
-      console.log('Planner ▶️ Critic suggests improvement:', critique.improve);
-      answer = await this.answer.answer(
-        normalized + ' (please improve: ' + critique.improve + ')',
-        distilledFacts,
-        plan,
-        validCandidates
-          .filter(c => c.js_code && typeof c.js_code === 'string')
-          .map(c => c.js_code)
-      );
-    }
-
-    // 9) Metacognition
-    const selfEval = await this.meta.evaluate(answer, normalized);
-
-    // 10) Memory Consolidation (may be disabled)
-    this.memory.update(normalized, queryEmbedding);
-
-    // Final structured JSON
-    return {
-      normalizedQuery: normalized,
-      filteredTokens:  tokens,
-      intent,
-      entities,
-      candidates: validCandidates.map(c => ({ ee_code: c.ee_code, score: c.score })),
-      distilledFacts,
-      plan,
-      answer,
-      critique,
-      selfEval
-    };
+        return {
+          answer,
+          entities,
+          plan,
+          candidates,
+          filteredTokens,
+          normalizedQuery: preprocessed,
+          critique,
+          selfEval
+        };
+      } catch (error) {
+        console.error('Planner ❌ Error:', error);
+        // Return a fallback response instead of throwing
+        return {
+          answer: "I apologize, but I'm having trouble processing your request. Could you please rephrase your question?",
+          entities: [],
+          plan: ["Analyze the query", "Provide a general response"],
+          candidates: [],
+          filteredTokens: [],
+          normalizedQuery: query,
+          critique: {
+            confidence: 0.5,
+            improve: "Unable to process request at this time."
+          },
+          selfEval: {
+            confidence: 0.5,
+            notes: "Using fallback response due to error."
+          }
+        };
+      } finally {
+        span.end();
+      }
+    });
   }
 }
 

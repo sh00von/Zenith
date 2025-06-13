@@ -47,46 +47,45 @@ export class SearchAgent {
     }
   }
 
-  async search(query, entities = []) {
+  async search(query, candidates) {
     return tracer.startActiveSpan('SearchAgent.search', async span => {
       try {
-        // 1) Vector embed
-        const embRes = await this.embeddingModel.embedContent(query);
-        const qEmb   = embRes.embedding.values;
-
-        // 2) Semantic scoring
-        const sem = this.embeddings
-          .map(ds => ({
-            ...ds,
-            vscore: this.cosine(ds.embedding, qEmb)
-          }))
-          .sort((a, b) => b.vscore - a.vscore)
-          .slice(0, 10);
-
-        // 3) BM25 keyword scores
-        let bm25Map = new Map();
-        try {
-          const bm25Results = this.bm25
-            .search(query, { expand: true })
-            .map(r => ({ ee_code: r.ref, kscore: r.score }));
-          bm25Map = new Map(bm25Results.map(r => [r.ee_code, r.kscore]));
-        } catch (err) {
-          console.error('SearchAgent ▶️ BM25 error:', err);
-        }
-
-        // 4) Merge semantic + BM25 scores
-        const merged = sem
-          .map(doc => ({
-            ...doc,
-            score: 0.7 * doc.vscore + 0.3 * (bm25Map.get(doc.ee_code) || 0)
-          }))
+        // Generate embedding for the query
+        const queryEmbedding = await this.embeddingModel.embedContent(query);
+        
+        // Calculate cosine similarity for each candidate
+        const results = candidates.map(candidate => {
+          const similarity = this.cosine(
+            queryEmbedding.embedding.values,
+            candidate.embedding
+          );
+          
+          // Boost score if query terms match band names or descriptions
+          let score = similarity;
+          if (candidate.bands) {
+            const queryTerms = query.toLowerCase().split(/\s+/);
+            const bandMatches = candidate.bands.filter(band => {
+              const bandText = `${band.name} ${band.description || ''}`.toLowerCase();
+              return queryTerms.some(term => bandText.includes(term));
+            });
+            if (bandMatches.length > 0) {
+              score += 0.1 * bandMatches.length; // Boost score for band matches
+            }
+          }
+          
+          return {
+            ...candidate,
+            score: Math.min(1, score) // Cap score at 1
+          };
+        });
+        
+        // Sort by score and take top 5
+        return results
           .sort((a, b) => b.score - a.score)
-          .slice(0, 10);
-
-        span.setAttribute('candidate.count', merged.length);
-        return { candidates: merged, queryEmbedding: qEmb };
-      } finally {
-        span.end();
+          .slice(0, 5);
+      } catch (error) {
+        console.error('Search ❌ Error:', error);
+        return [];
       }
     });
   }

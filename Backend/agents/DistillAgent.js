@@ -6,23 +6,48 @@ export class DistillAgent {
   
     async distill(query, candidates) {
       console.log("Distill ▶️ extracting facts…");
-      const facts = await Promise.all(candidates.map(async (c, idx) => {
-        if (!c || typeof c.text !== 'string') return '';
-        const prompt = `
-  Given the query "${query}" and this dataset info, extract the single most relevant fact only 5-6 facts:
-  "${c.text}"
-  `;
-        try {
-          const r = await this.model.generateContent(prompt);
-          const fact = (await r.response.text()).trim();
-          console.log(`Distill ▶️ fact #${idx}: ${fact.substring(0, 60)}…`);
-          return fact;
-        } catch (err) {
-          console.error(`Distill ▶️ error #${idx}:`, err);
-          return '';
+      const prompt = `
+Given the query "${query}" and these dataset candidates, extract the most relevant facts.
+Format the response as a JSON array of strings, each containing one fact.
+Example format:
+[
+  "Fact 1 about dataset",
+  "Fact 2 about dataset",
+  "Fact 3 about dataset"
+]
+`;
+      try {
+        const r = await this.model.generateContent(prompt);
+        const txt = await r.response.text();
+        
+        // Extract JSON array
+        const jsonMatch = txt.match(/\[[\s\S]*\]/);
+        if (!jsonMatch) {
+          throw new Error('No JSON array found in response');
         }
-      }));
-      return facts.filter(f => f).join('\n- ');
+        
+        const json = jsonMatch[0];
+        console.log(`Distill ▶️ Raw response: ${txt}`);
+        console.log(`Distill ▶️ Extracted JSON: ${json}`);
+        
+        // Parse and validate JSON
+        const facts = JSON.parse(json);
+        if (!Array.isArray(facts)) {
+          throw new Error('Response is not an array');
+        }
+        
+        // Validate each fact
+        facts.forEach((fact, i) => {
+          if (typeof fact !== 'string') {
+            throw new Error(`Fact ${i + 1} is not a string`);
+          }
+        });
+        
+        return facts;
+      } catch (error) {
+        console.error('Distill ❌ Error:', error.message);
+        return [];
+      }
     }
-  }
+}
   
