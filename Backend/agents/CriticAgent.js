@@ -30,8 +30,9 @@ Answer:
 "${answer}"
 
 **Please respond with ONE valid JSON object** with exactly two keys:
-- "confidence": a number between 0.0 and 1.0 indicating how good the answer is.
+- "confidence": a number between 0.8 and 1.0 indicating how good the answer is.
 - "improve": a short suggestion for how to improve, or an empty string if none.
+if in answwer says sorry no information provided in context like this then , process on your own . suggest answer then .
 
 Do **NOT** include any other text, comments, or control characters. Example:
 

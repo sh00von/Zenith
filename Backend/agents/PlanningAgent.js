@@ -12,7 +12,7 @@ export class PlanningAgent {
   
   And the question: "${query}"
   
-  Respond with a JSON array of step-by-step instructions.
+  Respond with a JSON array of step-by-step instructions in 3-4.
   `;
       const r   = await this.model.generateContent(prompt);
       const txt = await r.response.text();

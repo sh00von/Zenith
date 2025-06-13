@@ -8,7 +8,13 @@ export class IntentAgent {
       console.log("Intent ▶️ extracting…");
       const prompt = `
   Extract intent and key entities from this user query.
-  Respond with JSON: { "intent": "...", "entities": [ ... ] }.
+  If the query is about code or implementation, include code-related entities.
+  Respond with JSON: { 
+    "intent": "...", 
+    "entities": [ ... ],
+    "needs_code": boolean,
+    "code_type": "..." // e.g., "earth_engine", "javascript", "python", etc.
+  }
   
   Query: "${query}"
   `;

@@ -9,7 +9,7 @@ export class DistillAgent {
       const facts = await Promise.all(candidates.map(async (c, idx) => {
         if (!c || typeof c.text !== 'string') return '';
         const prompt = `
-  Given the query "${query}" and this dataset info, extract the single most relevant fact:
+  Given the query "${query}" and this dataset info, extract the single most relevant fact only 5-6 facts:
   "${c.text}"
   `;
         try {

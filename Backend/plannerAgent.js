@@ -38,7 +38,7 @@ export class PlannerAgent {
     this.genModel   = ai.getGenerativeModel({ model: GEN_MODEL });
 
     // instantiate agents
-    this.pre      = new PreprocessAgent();
+    this.pre      = new PreprocessAgent(this.genModel);
     this.attn     = new AttentionAgent();
     this.intent   = new IntentAgent(this.genModel);
     this.search   = new SearchAgent(this.embedModel, this.embeddings);
@@ -56,7 +56,7 @@ export class PlannerAgent {
     console.log(`\nPlanner ▶️ Received query: "${raw}"`);
 
     // 1) Perception
-    const normalized = this.pre.preprocess(raw);
+    const normalized = await this.pre.preprocess(raw);
 
     // 2) Attention
     const tokens = this.attn.filterTokens(normalized);
@@ -73,7 +73,20 @@ export class PlannerAgent {
       : [];
 
     if (validCandidates.length === 0) {
-      throw new Error('No valid search candidates found (all results missing `text`)');
+      console.log("Planner ▶️ No valid candidates found, proceeding with general knowledge");
+      // Return a basic response structure without candidates
+      return {
+        normalizedQuery: normalized,
+        filteredTokens: tokens,
+        intent,
+        entities,
+        candidates: [],
+        distilledFacts: "No specific data found in embeddings. Using general knowledge.",
+        plan: ["Analyze query", "Provide general guidance", "Include relevant examples"],
+        answer: await this.answer.answer(normalized, "", []),
+        critique: { confidence: 0.8, improve: "" },
+        selfEval: { confidence: 0.8, notes: "Using general knowledge" }
+      };
     }
     console.log(`Planner ▶️ ${validCandidates.length} valid candidates`);
 
@@ -84,7 +97,14 @@ export class PlannerAgent {
     const plan = await this.planner.plan(distilledFacts, normalized);
 
     // 7) Verbalization
-    let answer = await this.answer.answer(normalized, distilledFacts, plan);
+    let answer = await this.answer.answer(
+      normalized, 
+      distilledFacts, 
+      plan, 
+      validCandidates
+        .filter(c => c.js_code && typeof c.js_code === 'string')
+        .map(c => c.js_code)
+    );
 
     // 8) Critic Loop
     const critique = await this.critic.critique(normalized, answer, distilledFacts);
@@ -93,7 +113,10 @@ export class PlannerAgent {
       answer = await this.answer.answer(
         normalized + ' (please improve: ' + critique.improve + ')',
         distilledFacts,
-        plan
+        plan,
+        validCandidates
+          .filter(c => c.js_code && typeof c.js_code === 'string')
+          .map(c => c.js_code)
       );
     }
 

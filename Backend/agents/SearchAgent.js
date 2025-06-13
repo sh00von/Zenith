@@ -13,7 +13,8 @@ export class SearchAgent {
           typeof ds.text === 'string' &&
           Array.isArray(ds.embedding) &&
           ds.embedding.length > 0 &&
-          typeof ds.ee_code === 'string'
+          typeof ds.ee_code === 'string' &&
+          typeof ds.js_code === 'string'
         )
       : [];
 

@@ -27,6 +27,69 @@ function createDocumentText(dataset) {
     return `Dataset EE Code: ${dataset.ee_code}; Provider: ${dataset.provider}; Description: ${dataset.description}; Classes: ${classDescriptions}`;
 }
 
+function createCodeExample(dataset) {
+    // Create a comprehensive Earth Engine code example based on the dataset
+    const isImageCollection = dataset.ee_code.includes('ImageCollection');
+    const isFeatureCollection = dataset.ee_code.includes('FeatureCollection');
+    
+    let code = `// Example usage of ${dataset.ee_code}
+// Load the dataset
+var ${dataset.ee_code.split('/').pop().replace(/[^a-zA-Z0-9]/g, '_')} = `;
+
+    if (isImageCollection) {
+        code += `ee.ImageCollection('${dataset.ee_code}')
+    .filterDate('2023-01-01', '2023-12-31')
+    .filterBounds(ee.Geometry.Point([0, 0]));  // Replace with your region of interest
+
+// Get the first image for visualization
+var image = ${dataset.ee_code.split('/').pop().replace(/[^a-zA-Z0-9]/g, '_')}.first();
+
+// Add visualization parameters
+var visParams = {
+    min: 0,
+    max: 1,
+    palette: ['red', 'yellow', 'green']
+};
+
+// Display the image
+Map.centerObject(image, 7);
+Map.addLayer(image, visParams, '${dataset.ee_code.split('/').pop()}');
+
+// Print image properties
+print('Image properties:', image.propertyNames());
+print('Available bands:', image.bandNames());`;
+    } else if (isFeatureCollection) {
+        code += `ee.FeatureCollection('${dataset.ee_code}')
+    .filterBounds(ee.Geometry.Point([0, 0]));  // Replace with your region of interest
+
+// Display the features
+Map.centerObject(${dataset.ee_code.split('/').pop().replace(/[^a-zA-Z0-9]/g, '_')}, 7);
+Map.addLayer(${dataset.ee_code.split('/').pop().replace(/[^a-zA-Z0-9]/g, '_')}, {}, '${dataset.ee_code.split('/').pop()}');
+
+// Print feature properties
+print('Feature properties:', ${dataset.ee_code.split('/').pop().replace(/[^a-zA-Z0-9]/g, '_')}.first().propertyNames());`;
+    } else {
+        code += `ee.Image('${dataset.ee_code}');
+
+// Add visualization parameters
+var visParams = {
+    min: 0,
+    max: 1,
+    palette: ['red', 'yellow', 'green']
+};
+
+// Display the image
+Map.centerObject(${dataset.ee_code.split('/').pop().replace(/[^a-zA-Z0-9]/g, '_')}, 7);
+Map.addLayer(${dataset.ee_code.split('/').pop().replace(/[^a-zA-Z0-9]/g, '_')}, visParams, '${dataset.ee_code.split('/').pop()}');
+
+// Print image properties
+print('Image properties:', ${dataset.ee_code.split('/').pop().replace(/[^a-zA-Z0-9]/g, '_')}.propertyNames());
+print('Available bands:', ${dataset.ee_code.split('/').pop().replace(/[^a-zA-Z0-9]/g, '_')}.bandNames());`;
+    }
+
+    return code;
+}
+
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 async function main() {
@@ -55,6 +118,7 @@ async function main() {
         // Create an array of promises for the current batch
         const promises = currentBatch.map(async (dataset) => {
             const documentText = createDocumentText(dataset);
+            const jsCode = createCodeExample(dataset);
             try {
                 const result = await model.embedContent(documentText);
                 const embedding = result.embedding.values;
@@ -64,7 +128,8 @@ async function main() {
                     value: {
                         ee_code: dataset.ee_code,
                         text: documentText,
-                        embedding: embedding
+                        embedding: embedding,
+                        js_code: jsCode
                     }
                 };
             } catch (error) {

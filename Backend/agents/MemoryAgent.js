@@ -31,7 +31,8 @@ export class MemoryAgent {
     this.embeddings.push({
       ee_code:  `user-${Date.now()}`,
       text:      query,
-      embedding
+      embedding,
+      js_code:   ''
     });
 
     try {
