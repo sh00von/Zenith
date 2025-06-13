@@ -1,0 +1,32 @@
+{
+    "version": 2,
+    "name": "gee-sophisticated-brain",
+    "builds": [
+      {
+        "src": "server.js",
+        "use": "@vercel/node",
+        "config": {
+          "includeFiles": [
+            "dataset_embeddings.json",
+            "agents/**/*",
+            "utils/**/*"
+          ]
+        }
+      }
+    ],
+    "routes": [
+      {
+        "src": "/rag-query",
+        "methods": ["POST"],
+        "dest": "server.js"
+      }
+    ],
+    "env": {
+      "GEMINI_API_KEY": "AIzaSyB2SBQJdcsbkK4iaWrYv1auSt9mgwhJrvs" 
+    },
+    "node": {
+      "runtime": "nodejs18.x",
+      "maxLambdaSize": "50mb"
+    }
+  }
+  
