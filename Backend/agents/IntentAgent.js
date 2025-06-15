@@ -1,7 +1,7 @@
 // agents/IntentAgent.js
 export class IntentAgent {
-    constructor(model) {
-      this.model = model;  // raw Gemini model
+    constructor(planner) {
+      this.planner = planner;  // planner instance with unified interface
     }
   
     async extract(query) {
@@ -18,8 +18,7 @@ export class IntentAgent {
   
   Query: "${query}"
   `;
-      const res = await this.model.generateContent(prompt);
-      const txt = await res.response.text();
+      const txt = await this.planner.generateContent(prompt);
       const json = txt.slice(txt.indexOf('{'), txt.lastIndexOf('}') + 1);
       return JSON.parse(json);
     }

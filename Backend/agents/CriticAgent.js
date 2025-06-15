@@ -1,14 +1,14 @@
 // agents/CriticAgent.js
 export class CriticAgent {
   /**
-   * @param {object} model  Your raw Gemini model
+   * @param {object} planner  Your planner instance with unified interface
    */
-  constructor(model) {
-    this.model = model;
+  constructor(planner) {
+    this.planner = planner;
   }
 
   /**
-   * Asks the model to critique the answer, then safely parses the JSON.
+   * Asks the planner to critique the answer, then safely parses the JSON.
    *
    * @param {string} query
    * @param {string} answer
@@ -33,8 +33,7 @@ Respond with a JSON object in this format:
 }
 `;
     try {
-      const r = await this.model.generateContent(prompt);
-      const txt = await r.response.text();
+      const txt = await this.planner.generateContent(prompt);
       
       // Extract JSON object
       const jsonMatch = txt.match(/\{[\s\S]*\}/);

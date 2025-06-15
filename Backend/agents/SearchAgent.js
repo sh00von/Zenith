@@ -3,12 +3,13 @@ import { tracer } from '../utils/tracer.js';
 import { buildBM25 } from '../utils/bm25Index.js';
 
 export class SearchAgent {
-  constructor(embeddingModel, embeddings) {
-    this.embeddingModel = embeddingModel;
+  constructor(planner) {
+    this.planner = planner;
+    this.embeddings = planner.embeddings;
 
     // 1) Filter to only embeddings with a valid `text` string and an array embedding
-    this.embeddings = Array.isArray(embeddings)
-      ? embeddings.filter(ds =>
+    this.embeddings = Array.isArray(this.embeddings)
+      ? this.embeddings.filter(ds =>
           ds &&
           typeof ds.text === 'string' &&
           Array.isArray(ds.embedding) &&
@@ -18,10 +19,10 @@ export class SearchAgent {
         )
       : [];
 
-    if (this.embeddings.length !== embeddings.length) {
+    if (this.embeddings.length !== planner.embeddings.length) {
       console.warn(
         `SearchAgent ▶️ filtered out ${
-          embeddings.length - this.embeddings.length
+          planner.embeddings.length - this.embeddings.length
         } invalid embedding entries`
       );
     }
@@ -51,12 +52,12 @@ export class SearchAgent {
     return tracer.startActiveSpan('SearchAgent.search', async span => {
       try {
         // Generate embedding for the query
-        const queryEmbedding = await this.embeddingModel.embedContent(query);
+        const queryEmbedding = await this.planner.embedContent(query);
         
         // Calculate cosine similarity for each candidate
         const results = candidates.map(candidate => {
           const similarity = this.cosine(
-            queryEmbedding.embedding.values,
+            queryEmbedding,
             candidate.embedding
           );
           

@@ -1,7 +1,7 @@
 // agents/PlanningAgent.js
 export class PlanningAgent {
-    constructor(model) {
-      this.model = model;  // raw Gemini model
+    constructor(planner) {
+      this.planner = planner;  // planner instance with unified interface
     }
   
     async plan(distilled, query) {
@@ -29,8 +29,7 @@ Respond with a JSON array of step objects in this format:
 ]
 `;
       try {
-        const r = await this.model.generateContent(prompt);
-        const txt = await r.response.text();
+        const txt = await this.planner.generateContent(prompt);
         
         // Extract JSON array
         const jsonMatch = txt.match(/\[[\s\S]*\]/);

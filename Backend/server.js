@@ -36,6 +36,8 @@ app.use(express.json());
       try {
         const result = await plannerAgent.processQuery(query);
         return res.json(result);
+        console.log("Server ✅ Completed /rag-query:", result);
+
 
       } catch (err) {
         console.error("Server ❌ Error processing query:", err);
@@ -47,6 +49,7 @@ app.use(express.json());
         }
       } finally {
         span.end();
+    
       }
     });
   });

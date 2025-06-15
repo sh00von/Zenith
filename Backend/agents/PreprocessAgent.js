@@ -1,7 +1,7 @@
 // agents/PreprocessAgent.js
 export class PreprocessAgent {
-    constructor(model) {
-      this.model = model;  // raw Gemini model
+    constructor(planner) {
+      this.planner = planner;  // planner instance with unified interface
     }
 
     async preprocess(query) {
@@ -31,15 +31,15 @@ Query: "${normalized}"
 `;
       
       try {
-        const res = await this.model.generateContent(prompt);
-        const corrected = (await res.response.text())
+        const corrected = await this.planner.generateContent(prompt);
+        const cleaned = corrected
           .trim()
           .replace(/^["']|["']$/g, ''); // Remove any surrounding quotes
         
         console.log(`Preprocess ▶️ Original: "${normalized}"`);
-        console.log(`Preprocess ▶️ Corrected: "${corrected}"`);
+        console.log(`Preprocess ▶️ Corrected: "${cleaned}"`);
         
-        return corrected || normalized; // Fallback to normalized if corrected is empty
+        return cleaned || normalized; // Fallback to normalized if corrected is empty
       } catch (err) {
         console.warn("Preprocess ▶️ Grammar correction failed, using normalized query:", err);
         return normalized;
