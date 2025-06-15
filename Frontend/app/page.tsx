@@ -180,7 +180,7 @@ export default function Home() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://localhost:5000/rag-query', {
+      const response = await fetch('https://zenithbackend.vercel.app/rag-query', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

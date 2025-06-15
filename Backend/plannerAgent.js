@@ -24,8 +24,6 @@ const GEN_MODEL  = 'gemini-2.0-flash-lite';
 const AZURE_ENDPOINT = process.env.AZURE_ENDPOINT || "https://todvob-ai.openai.azure.com/";
 const AZURE_MODEL = process.env.AZURE_MODEL || "gpt-4o-mini";
 const AZURE_DEPLOYMENT = process.env.AZURE_DEPLOYMENT || "gpt-4o-mini";
-const AZURE_EMBEDDING_MODEL = process.env.AZURE_EMBEDDING_MODEL || "text-embedding-ada-002";
-const AZURE_EMBEDDING_DEPLOYMENT = process.env.AZURE_EMBEDDING_DEPLOYMENT || "text-embedding-ada-002";
 const AZURE_API_VERSION = process.env.AZURE_API_VERSION || "2024-04-01-preview";
 
 // Model selection
