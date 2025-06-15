@@ -357,7 +357,7 @@ export default function Home() {
       <aside className={`fixed inset-y-0 left-0 z-30 w-64 bg-zinc-900/80 backdrop-blur-xl border-r border-zinc-800/30 transform transition-all duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="p-4 border-b border-zinc-800/50 flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-medium bg-gradient-to-r from-zinc-100 to-zinc-400 bg-clip-text text-transparent">Geo-Brain</h2>
+            <h2 className="text-lg font-medium bg-gradient-to-r from-zinc-100 to-zinc-400 bg-clip-text text-transparent">ZENITH</h2>
             <p className="text-sm text-zinc-500">Navigation</p>
           </div>
           <button
@@ -419,7 +419,7 @@ export default function Home() {
                 </svg>
               </button>
               <div>
-                <h1 className="text-lg font-medium bg-gradient-to-r from-zinc-100 to-zinc-400 bg-clip-text text-transparent">Geo-Brain</h1>
+                <h1 className="text-lg font-medium bg-gradient-to-r from-zinc-100 to-zinc-400 bg-clip-text text-transparent">Zenith</h1>
                 <p className="text-sm text-zinc-500">Geospatial analysis assistant</p>
               </div>
             </div>
@@ -436,7 +436,7 @@ export default function Home() {
                   <div className="w-16 h-16 bg-zinc-800/50 rounded-full flex items-center justify-center mx-auto mb-6 ring-4 ring-zinc-800/30">
                     <div className="w-8 h-8 bg-zinc-600 rounded-full animate-pulse"></div>
                   </div>
-                  <h2 className="text-2xl font-medium mb-3 bg-gradient-to-r from-zinc-100 to-zinc-400 bg-clip-text text-transparent">Welcome to Geo-Brain</h2>
+                  <h2 className="text-2xl font-medium mb-3 bg-gradient-to-r from-zinc-100 to-zinc-400 bg-clip-text text-transparent">Welcome to Zenith</h2>
                   <p className="text-zinc-400 max-w-md mx-auto mb-12">
                     Ask me about geospatial analysis, Earth Engine datasets, or ecosystem service calculations.
                   </p>
