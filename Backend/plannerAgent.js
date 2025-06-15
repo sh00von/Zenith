@@ -16,7 +16,7 @@ import { CriticAgent }         from './agents/CriticAgent.js';
 import { MetacognitionAgent }  from './agents/MetacognitionAgent.js';
 import { MemoryAgent }         from './agents/MemoryAgent.js';
 
-const EMB_PATH   = './dataset_embeddings.json';
+const EMB_PATH   = 'dataset_embeddings.json';
 const EMB_MODEL  = 'text-embedding-004';
 const GEN_MODEL  = 'gemini-2.0-flash-lite';
 
